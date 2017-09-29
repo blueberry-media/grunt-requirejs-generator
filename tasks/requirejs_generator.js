@@ -15,7 +15,7 @@ var fs = require ('fs');
 
 module.exports = function(grunt) {
 
-	grunt.registerMultiTask('requirejs_generator', 'Grunt requirejs config generator', function() {
+	grunt.registerMultiTask('requirejs_generator', 'Grunt requirejs config generator', function(deploy_target) {
 
 		var
 			starttime       = Date.now(),
@@ -57,10 +57,7 @@ module.exports = function(grunt) {
 
 
 			// Merge task-specific and/or target-specific options with these defaults.
-			options = this.options({
-				punctuation: '.',
-				separator: ', '
-			}),
+			options = this.data.config.options,
 
 			/**
 			 * @method readFile
@@ -105,9 +102,17 @@ module.exports = function(grunt) {
 				if (options.hasOwnProperty('remove') ) {
 					path = path.replace( options.remove , '' );
 				}
-				if ( options.hasOwnProperty('replace') && options.replace.hasOwnProperty('that') && options.replace.hasOwnProperty('with') ) {
-					path = path.replace( options.replace.that , options.replace.with );
-				}
+				if ( options.hasOwnProperty('replace') ){
+                    //replace can be an array with replacements
+                    if(options.replace.hasOwnProperty('that') && options.replace.hasOwnProperty('with') ) {
+                        path = path.replace( options.replace.that , options.replace.with );
+                    }else if(options.replace.hasOwnProperty('length')){
+                        options.replace.forEach(function(value, i, arr){
+                            path = path.replace( value.that , value.with );
+                        })
+                    }
+
+                }
 				/*if ( options.hasOwnProperty('replace') && options.replace.hasOwnProperty('prefix') ) {
 					path = options.replace.prefix+path;
 				}*/
@@ -260,7 +265,9 @@ module.exports = function(grunt) {
 			uml = ''
 		;
 
-		String.prototype.repeat = function( num ) {
+    grunt.log.writeln("TARGET: ", this.target['yellow'].bold );
+
+    String.prototype.repeat = function( num ) {
 			return new Array( num + 1 ).join( this );
 		};
 
@@ -279,6 +286,11 @@ module.exports = function(grunt) {
 		// Check if data.json exists in yuidoc directory
 		if ( !fs.existsSync( options.yuidoc_dir + '/data.json' ) ) {
 			throw new Error("Yuidoc data.json is not generated: "+options.yuidoc_dir + '/data.json');
+		}
+
+		// Check if the outDir exists, if not create it.
+		if (options.minify && options.minify.enabled == true && !fs.existsSync( options.minify.outDir ) ) {
+			fs.mkdirSync(options.minify.outDir);
 		}
 
 		// Check if ignore is set, if not set it
@@ -484,7 +496,7 @@ module.exports = function(grunt) {
 					//	grunt.log.writeln('File: '+paths[name]);
 
 						// Check if file entry starts with slash, if so it is an external loaded file
-						if (p.indexOf("/") > 0) {
+            if( p.indexOf("/") !== 0 && p.indexOf("://") == -1 ){
 							if (minify.ignore.indexOf(name) === -1) {
 
 								if ( options.minify.config.paths.hasOwnProperty(name) && p.indexOf("bower") !== -1) {
@@ -566,7 +578,7 @@ module.exports = function(grunt) {
 						d.push('"' + name + '"');
 						e.push(name.replace("-", ""));
 					}
-					if (paths[name].indexOf("/") > 0) {
+          if( paths[name].indexOf("/") !== 0 && paths[name].indexOf("://") == -1 ){
 						//paths[name] = formatFileName(paths[name]);
 						delete paths[name];
 					}
