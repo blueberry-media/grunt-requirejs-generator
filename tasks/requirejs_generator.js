@@ -246,6 +246,13 @@ module.exports = function(grunt) {
 				}
 				for ( name in shim ) {
 					if ( name === target ) {
+						if(verbose){
+							grunt.log.writeln("createUMLDependencies loop: ", depth, name );
+						}
+						if(depth > 1000){
+							grunt.fail.fatal("Inf loop detected in createUMLDependencies, check cross dependencies --verbose for more info");
+						}
+
 						if ( shim[name].hasOwnProperty("deps") && shim[name].deps.length > 0 ) {
 							for ( i = 0 ; i < shim[name].deps.length ; i ++ ) {
 								if ( !d && write ) {
@@ -408,6 +415,7 @@ module.exports = function(grunt) {
 			for (name in options.config.paths) {
 				classList.push( name );
 			}
+			var verbose = grunt.option('verbose')
 			createUMLDependencies(application,1, false );
 			writeFile( options.build_dir + "/uml.jumly", uml );
 		}
